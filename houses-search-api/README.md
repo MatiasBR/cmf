@@ -16,8 +16,6 @@ FastAPI backend service for searching real estate properties (2.2M+ listings) wi
 - **Rate limiting** - 100 req/min per IP (no external dependencies)
 - **Better errors** - Clear error messages for invalid inputs
 
-**See [OPTIONALS.md](OPTIONALS.md) for details on bonus features added for production.**
-
 ## Quick Start
 
 ```bash
@@ -36,6 +34,45 @@ cp .env.example .env
 
 **First startup:** ~8-10 seconds (downloads & imports 2.2M properties)  
 **Subsequent startups:** ~1-2 seconds (reads from local cache)
+
+## Bonus Features Details
+
+### 1. Strict Parameter Validation 🟢
+Invalid inputs are rejected immediately with clear error messages:
+```bash
+# Invalid status → 422 Unprocessable Entity
+GET /properties?status=invalid_status
+
+# Conflicting filters (min > max) → 400 Bad Request
+GET /properties?status=for_sale&min_price=1000000&max_price=100
+```
+**Why:** Prevents silent failures, catches errors early, better API contract.
+
+### 2. Analytics Endpoints 🟢
+Business intelligence without SQL knowledge:
+```bash
+GET /analytics/top-cities          # Top 10 cities by listings
+GET /analytics/top-states          # Top 10 states by listings
+GET /analytics/price-stats         # Avg, min, max prices
+GET /analytics/status-distribution # Count by status
+GET /analytics/database-info       # Total properties, cached demographics
+```
+
+### 3. Rate Limiting (No Dependencies) 🟢
+Built-in protection against abuse:
+- **Limit:** 100 requests/minute per IP
+- **Exempt:** Health checks (`/health`)
+- **Response:** 429 Too Many Requests when exceeded
+- **Implementation:** In-memory tracking, O(1) performance
+
+**Why:** Prevents DOS attacks, fair resource sharing, protects downstream services.
+
+### 4. Production Architecture 🟡
+- **Idempotent startup** - Safe to restart, no duplicate data imports
+- **Async/await throughout** - Non-blocking I/O (DB, HTTP)
+- **Smart caching** - 24h TTL for demographics, local CSV caching
+- **Bulk operations** - `executemany` for 10x faster imports
+- **Database indexes** - On status, state_code, zip_code, city, price
 
 ## API Endpoints
 
@@ -430,19 +467,19 @@ curl "http://localhost:8000/properties?status=for_sale&city=Brooklyn&min_bed=2&m
 
 ### Current Limitations
 1. **HTML Parsing fragile** - ZipWho structure may change
-2. **Rate limiting** - No protection against spam
-3. **Demographics incomplete** - Only parse 3 fields
-4. **Territories excluded** - AS, GU, MP, PR, VI not supported
+2. **Demographics incomplete** - Only parse 3 fields (median_income, population, median_age)
+3. **Territories excluded** - AS, GU, MP, PR, VI not supported (no ZipWho data)
 
 ### Future Enhancements
-- [ ] Add Elasticsearch for full-text search
-- [ ] Implement rate limiting + API key auth
+- [ ] Replace ZipWho scraping with US Census API (official, reliable)
+- [ ] Add API key authentication for rate limiting
 - [ ] Add more demographic fields (education, income distribution)
 - [ ] Support schedule-based data refresh
-- [ ] Add analytics endpoint (listings by city, price trends)
+- [ ] Add Elasticsearch for full-text search
 - [ ] Implement WebSocket for real-time updates
 - [ ] Add property image gallery support
 - [ ] ML: Price prediction model
+- [ ] Implement Redis caching for high-traffic scenarios
 
 ## Troubleshooting
 
