@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+aiosqlite
+httpx
+beautifulsoup4
+pandas
+lxml
+pydantic
+python-dotenv
+pytest
+pytest-asyncio
+pytest-cov
